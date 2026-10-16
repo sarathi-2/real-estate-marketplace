@@ -1,0 +1,12 @@
+import { motion } from 'framer-motion'
+import { Link } from 'react-router-dom'
+import { BedDouble, Bath, MoveUpRight, Heart, Maximize2 } from 'lucide-react'
+export const formatPrice = (price, status = 'For sale') => status === 'For rent'
+  ? `₹${new Intl.NumberFormat('en-IN').format(price)}/mo`
+  : price >= 10000000 ? `₹${(price / 10000000).toFixed(2).replace(/0$/, '').replace(/\.$/, '')} Cr` : `₹${(price / 100000).toFixed(0)} L`
+export default function PropertyCard({ property, saved, onToggle, index = 0, compare = false, isCompared = false, onCompare }) {
+  return <motion.article className="property-card" initial={{ opacity: 0, y: 18 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .12 }} transition={{ duration: .38, delay: Math.min(index * .05, .2) }}>
+    <div className="property-image-wrap"><Link to={`/properties/${property.id}`} aria-label={`View ${property.title}`}><img className="property-image" src={property.image} onError={e => { if (property.fallback && e.currentTarget.src !== property.fallback) e.currentTarget.src = property.fallback }} alt={property.title}/></Link><span className={`status-pill ${property.status === 'For rent' ? 'rent' : ''}`}>{property.status}</span>{property.featured && <span className="featured-pill">Featured</span>}<button className={`save-button ${saved ? 'saved' : ''}`} onClick={() => onToggle(property.id)} aria-label={saved ? 'Remove from wishlist' : 'Save property'}><Heart size={18} fill={saved ? 'currentColor' : 'none'}/></button></div>
+    <div className="property-card-body"><p className="eyebrow location-line">{property.location}</p><Link to={`/properties/${property.id}`} className="property-title">{property.title}</Link><div className="property-specs"><span><BedDouble size={16}/>{property.beds} beds</span><span><Bath size={16}/>{property.baths} baths</span><span><Maximize2 size={15}/>{property.area.toLocaleString('en-IN')} sq ft</span></div><div className="property-card-bottom"><strong>{formatPrice(property.price, property.status)}</strong><Link to={`/properties/${property.id}`} className="round-arrow" aria-label="View details"><MoveUpRight size={18}/></Link></div>{compare && <button className={`compare-toggle ${isCompared ? 'selected' : ''}`} onClick={() => onCompare(property.id)}>{isCompared ? '✓ Added to compare' : '+ Add to compare'}</button>}</div>
+  </motion.article>
+}

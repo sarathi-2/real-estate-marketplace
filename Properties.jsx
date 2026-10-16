@@ -1,0 +1,34 @@
+import { useMemo, useState, useEffect } from 'react'
+import { useSearchParams, Link } from 'react-router-dom'
+import { SlidersHorizontal, X, ChevronLeft, ChevronRight, ArrowUpDown, GitCompare } from 'lucide-react'
+import PropertyCard from '../components/PropertyCard'
+const PAGE_SIZE = 6
+export default function Properties({ properties, wishlist, toggleWishlist, compared, toggleCompare }) {
+  const [params, setParams] = useSearchParams()
+  const [query, setQuery] = useState(params.get('query') || '')
+  const [status, setStatus] = useState(params.get('status') || 'All')
+  const [type, setType] = useState(params.get('type') || 'All')
+  const [beds, setBeds] = useState('Any')
+  const [maxPrice, setMaxPrice] = useState('Any')
+  const [sort, setSort] = useState('recommended')
+  const [page, setPage] = useState(1)
+  const [showFilters, setShowFilters] = useState(false)
+  useEffect(() => { setQuery(params.get('query') || ''); setStatus(params.get('status') || 'All'); setType(params.get('type') || 'All') }, [params])
+  const filtered = useMemo(() => {
+    let list = properties.filter(p => {
+      const text = `${p.title} ${p.location} ${p.city} ${p.type}`.toLowerCase()
+      return (!query || text.includes(query.toLowerCase())) && (status === 'All' || p.status === status) && (type === 'All' || p.type === type) && (beds === 'Any' || p.beds >= Number(beds)) && (maxPrice === 'Any' || (p.status === 'For rent' ? p.price <= Number(maxPrice) : p.price <= Number(maxPrice)))
+    })
+    if (sort === 'price-low') list = [...list].sort((a,b) => a.price - b.price)
+    if (sort === 'price-high') list = [...list].sort((a,b) => b.price - a.price)
+    if (sort === 'area') list = [...list].sort((a,b) => b.area - a.area)
+    if (sort === 'newest') list = [...list].reverse()
+    return list
+  }, [properties, query, status, type, beds, maxPrice, sort])
+  useEffect(() => setPage(1), [query, status, type, beds, maxPrice, sort])
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
+  const visible = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const reset = () => { setQuery(''); setStatus('All'); setType('All'); setBeds('Any'); setMaxPrice('Any'); setSort('recommended'); setParams({}) }
+  const filters = <div className="filters-inner"><div className="filter-title"><h3>Refine your search</h3><button className="icon-button" onClick={() => setShowFilters(false)} aria-label="Close filters"><X size={18}/></button></div><label className="filter-label">Keyword or area<input className="form-control" placeholder="e.g. Chennai" value={query} onChange={e => setQuery(e.target.value)}/></label><label className="filter-label">Availability<select className="form-control" value={status} onChange={e => setStatus(e.target.value)}><option value="All">Buy or rent</option><option value="For sale">For sale</option><option value="For rent">For rent</option></select></label><label className="filter-label">Property type<select className="form-control" value={type} onChange={e => setType(e.target.value)}><option value="All">All property types</option><option>House</option><option>Apartment</option><option>Villa</option><option>Studio</option></select></label><label className="filter-label">Bedrooms<select className="form-control" value={beds} onChange={e => setBeds(e.target.value)}><option>Any</option><option value="1">1+ bedroom</option><option value="2">2+ bedrooms</option><option value="3">3+ bedrooms</option><option value="4">4+ bedrooms</option></select></label><label className="filter-label">Maximum price<select className="form-control" value={maxPrice} onChange={e => setMaxPrice(e.target.value)}><option value="Any">Any price</option><option value="5000000">₹50 lakh</option><option value="10000000">₹1 crore</option><option value="20000000">₹2 crore</option><option value="30000000">₹3 crore</option></select></label><button className="btn-primary w-full" onClick={() => setShowFilters(false)}>Show {filtered.length} homes</button><button className="reset-button" onClick={reset}>Clear all filters</button></div>
+  return <main className="page-main"><div className="container-shell"><div className="page-hero-row"><div><span className="eyebrow">The good places</span><h1 className="page-title">Find your <em>next place.</em></h1><p className="page-subtitle">Explore homes selected for the way you want to live.</p></div><div className="listing-side-note"><span>Thoughtfully found</span><strong>{properties.length} homes to discover</strong></div></div><div className="listing-toolbar"><button className="btn-outline filter-open" onClick={() => setShowFilters(true)}><SlidersHorizontal size={17}/> Filters</button><span className="results-count"><strong>{filtered.length}</strong> properties found</span><label className="sort-control"><ArrowUpDown size={16}/><span>Sort by</span><select value={sort} onChange={e => setSort(e.target.value)}><option value="recommended">Recommended</option><option value="newest">Recently added</option><option value="price-low">Price: low to high</option><option value="price-high">Price: high to low</option><option value="area">Largest area</option></select></label><Link className="btn-quiet compare-nav" to="/compare"><GitCompare size={17}/> Compare {compared.length > 0 && `(${compared.length})`}</Link></div><div className="listing-layout"><aside className="filter-sidebar">{filters}</aside><div className="listing-content">{visible.length ? <div className="property-grid listing-grid">{visible.map((p, i) => <PropertyCard key={p.id} property={p} index={i} saved={wishlist.includes(p.id)} onToggle={toggleWishlist} compare isCompared={compared.includes(p.id)} onCompare={toggleCompare}/>)}</div> : <div className="empty-state"><div className="empty-icon"><SlidersHorizontal/></div><h3>No homes match just yet</h3><p>Try adjusting your search or clearing a few filters.</p><button className="btn-primary" onClick={reset}>Clear filters</button></div>}{filtered.length > PAGE_SIZE && <div className="pagination"><span>Showing {(page-1)*PAGE_SIZE+1}–{Math.min(page*PAGE_SIZE, filtered.length)} of {filtered.length}</span><div className="pagination-actions"><button className="page-button" disabled={page===1} onClick={() => {setPage(page-1);window.scrollTo({top:0,behavior:'smooth'})}} aria-label="Previous page"><ChevronLeft size={18}/></button>{Array.from({length: totalPages}, (_,i) => <button key={i} onClick={() => {setPage(i+1);window.scrollTo({top:0,behavior:'smooth'})}} className={`page-button ${page===i+1?'current':''}`}>{i+1}</button>)}<button className="page-button" disabled={page===totalPages} onClick={() => {setPage(page+1);window.scrollTo({top:0,behavior:'smooth'})}} aria-label="Next page"><ChevronRight size={18}/></button></div></div>}</div></div></div>{showFilters && <div className="filter-overlay" onClick={() => setShowFilters(false)}><div className="filter-drawer" onClick={e => e.stopPropagation()}>{filters}</div></div>}</main>
+}
